@@ -538,7 +538,9 @@ public class TransformIncomingData implements Callable {
 				
 				//anytime exception thrown, do not insert into database, 
 				if(testing_enum.EXCEPTION_THROWN.getValue()==1){
+					System.out.println("EEEEEEEEEEEEE xception thrown");
 					return null; //break, since this is insertion
+					
 				}
 				
 				//StringBuilder sb=new StringBuilder("insert into nestle_Contact_reason (");
@@ -881,7 +883,7 @@ public class TransformIncomingData implements Callable {
 		}
 		
 		
-		testing_enum.EXCEPTION_THROWN.setValue(0);
+		testing_enum.EXCEPTION_THROWN.setValue(0); //TODO: move to the beginning of onCall!!!!!!!
 		
 		
 		
@@ -896,14 +898,54 @@ public class TransformIncomingData implements Callable {
 		
 		//final String username = "username@gmail.com";
 		//final String password = "password";
+		Connection dbConnection = DBConnection.getConnection(dbhost, authinfo, dbname);
+		ResultSet rs;
+        
+        
+		Statement matrix_statement=dbConnection.createStatement(); //rs(result set) loop only
+		
+		
+		
+		/*String queryString="select email_trigger from email_triggering_matrix where Level_1_ID__c='"+receipient_hashmap.get("Level_1_ID__c")+"'" +
+				" AND " +
+				"Level_2_ID__c='" +receipient_hashmap.get("Level_2_ID__c")+"'" +
+				" AND " +
+				"Level_3_ID__c='" +receipient_hashmap.get("Level_3_ID__c")+"'"
+				;*/
 
-		if(
+		String queryString="select email_trigger from email_triggering_matrix_level where ContactReason_Level1='"+receipient_hashmap.get("Level1__c")+"'" +
+				" AND " +
+				"ContactReason_Level2='" +receipient_hashmap.get("Level2__c")+"'" +
+				" AND " +
+				"ContactReason_Level3='" +receipient_hashmap.get("Level3__c")+"'"
+				;
+		
+		System.out.println("###########The email trigger query is :" +queryString);
+		try{
+		rs=matrix_statement.executeQuery(queryString);
+		}catch (SQLException e){ //ignored for now , return without throwing exception, otherwise case won't be updated
+			logger.info("ignore this query exception! "+e.getErrorCode());
+			return;
+		}
+		
+		if( (!rs.next())
+				||
+				(rs.getString("email_trigger").equals("0"))
+				)
+				{
+			return;
+				}
+		
+		
+		/*if(
 				((Float.valueOf((String)receipient_hashmap.get("Level__c")).intValue())!=3)
 				||
 				(!((String)receipient_hashmap.get("Name")).toLowerCase().contains("Injuries".toLowerCase()))
 				){ //Level is not 3, return without sending
 			return;
-		}
+		}*/
+		
+		
 		String injection_smtp_user=this.smtp_user;
 		String injection_smtp_password=this.smtp_password;
 		
