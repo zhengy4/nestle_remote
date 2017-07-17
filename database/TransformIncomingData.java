@@ -893,48 +893,86 @@ public class TransformIncomingData implements Callable {
 		
 	}
 	
+	private int contact_reason_rurc(Map<String,?>receipient_hashmap,int level,Statement matrix_statement) throws Exception{
+		
+		System.out.println("#### level is "+ level);
+		/*
+		 * String queryString=
+		 * "select email_trigger from email_triggering_matrix where Level_1_ID__c='"
+		 * +receipient_hashmap.get("Level_1_ID__c")+"'" + " AND " +
+		 * "Level_2_ID__c='" +receipient_hashmap.get("Level_2_ID__c")+"'" +
+		 * " AND " + "Level_3_ID__c='"
+		 * +receipient_hashmap.get("Level_3_ID__c")+"'" ;
+		 */
+		
+		if(level<2){
+			return -999;
+		}
+
+		ResultSet rs;
+		
+		
+		StringBuilder str_bld=new StringBuilder("select email_trigger from severe_contact_reasons where ");
+		
+		
+
+		for(int i=1;i<=level;i++){
+			str_bld.append("ContactReason_Level");
+			str_bld.append(i);
+			str_bld.append("='");
+			String temp_level_string="Level"+i+"__c";
+			str_bld.append(receipient_hashmap.get(temp_level_string));
+			str_bld.append("' ");
+			if(i==5){ //the top level that we look into, current is level 5
+				continue;
+			}else{
+				str_bld.append(" AND ");
+			}
+		}
+		
+		for(int i=(level+1);i<=5;i++){
+			str_bld.append("ContactReason_Level");
+			str_bld.append(i);
+			str_bld.append(" IS NULL ");
+			
+			if(i==5){
+				continue;
+			}else{
+				str_bld.append(" AND ");
+			}
+		}
+		
+		String queryString=str_bld.toString(); 
+		
+		System.out.println("###########The email trigger query is :" + queryString);
+		
+			rs = matrix_statement.executeQuery(queryString);
+		
+		if ((rs.next()) && (rs.getString("email_trigger").equals("1"))) {
+			return level;
+		}else{
+			return contact_reason_rurc(receipient_hashmap,level-1, matrix_statement);
+		}
+		
+	}
+	
+	
 	private void email_receipient(Map<String,?> receipient_hashmap) throws Exception{
 		
 		
 		//final String username = "username@gmail.com";
 		//final String password = "password";
 		Connection dbConnection = DBConnection.getConnection(dbhost, authinfo, dbname);
-		ResultSet rs;
+		
         
         
 		Statement matrix_statement=dbConnection.createStatement(); //rs(result set) loop only
 		
+		System.out.println(" the Level__c is "+receipient_hashmap.get("Level__c"));
+		int target_level=contact_reason_rurc(receipient_hashmap,Float.valueOf((String)receipient_hashmap.get("Level__c")).intValue(),matrix_statement);
 		
 		
-		/*String queryString="select email_trigger from email_triggering_matrix where Level_1_ID__c='"+receipient_hashmap.get("Level_1_ID__c")+"'" +
-				" AND " +
-				"Level_2_ID__c='" +receipient_hashmap.get("Level_2_ID__c")+"'" +
-				" AND " +
-				"Level_3_ID__c='" +receipient_hashmap.get("Level_3_ID__c")+"'"
-				;*/
-
-		String queryString="select email_trigger from email_triggering_matrix_level where ContactReason_Level1='"+receipient_hashmap.get("Level1__c")+"'" +
-				" AND " +
-				"ContactReason_Level2='" +receipient_hashmap.get("Level2__c")+"'" +
-				" AND " +
-				"ContactReason_Level3='" +receipient_hashmap.get("Level3__c")+"'"
-				;
-		
-		System.out.println("###########The email trigger query is :" +queryString);
-		try{
-		rs=matrix_statement.executeQuery(queryString);
-		}catch (SQLException e){ //ignored for now , return without throwing exception, otherwise case won't be updated
-			logger.info("ignore this query exception! "+e.getErrorCode());
-			return;
-		}
-		
-		if( (!rs.next())
-				||
-				(rs.getString("email_trigger").equals("0"))
-				)
-				{
-			return;
-				}
+		System.out.println("######target level is "+target_level);
 		
 		
 		/*if(
