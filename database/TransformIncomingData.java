@@ -287,7 +287,9 @@ public class TransformIncomingData implements Callable {
 	@Override
 	public Object onCall(MuleEventContext eventContext) throws Exception {
 		
-		System.out.println("########the testing variable is: "+testing_enum.TESTING_SINGLETON.getValue());
+		testing_enum.EXCEPTION_THROWN.setValue(0); 
+		
+		//System.out.println("########the testing variable is: "+testing_enum.TESTING_SINGLETON.getValue());
 		current_calendar=Calendar.getInstance();
 		
 		//Thread.sleep(30000);
@@ -883,7 +885,7 @@ public class TransformIncomingData implements Callable {
 		}
 		
 		
-		testing_enum.EXCEPTION_THROWN.setValue(0); //TODO: move to the beginning of onCall!!!!!!!
+		
 		
 		
 		
@@ -905,7 +907,7 @@ public class TransformIncomingData implements Callable {
 		 * +receipient_hashmap.get("Level_3_ID__c")+"'" ;
 		 */
 		
-		if(level<2){
+		if(level<1){
 			return -999;
 		}
 
@@ -975,6 +977,9 @@ public class TransformIncomingData implements Callable {
 		System.out.println("######target level is "+target_level);
 		
 		
+		if(target_level==-999){ //return without sending email
+			return;
+		}
 		/*if(
 				((Float.valueOf((String)receipient_hashmap.get("Level__c")).intValue())!=3)
 				||
@@ -1039,19 +1044,51 @@ public class TransformIncomingData implements Callable {
 		    }*/
 		    
 		    
-		    msg_body="Case Subject:   "+(String)receipient_hashmap.get("Subject")+"\n\n";
+			msg_body="Case Number:   "+(String)receipient_hashmap.get("CaseNumber")+"\n\n";
+			msg_body+="Creation Date:   "+(String)receipient_hashmap.get("CreatedDate")+"\n\n";
+		    msg_body+="Case Subject:   "+(String)receipient_hashmap.get("Subject")+"\n\n";
 		    msg_body+="Case Description:\n"+(String)receipient_hashmap.get("Description")+"\n\n";
 		    msg_body+="Region:  "+(String)receipient_hashmap.get("Country__c")+"\n";
-		    msg_body+="Contact Reason:  "+(String)receipient_hashmap.get("Name")+"\n";
+		    
+		    String severe_reason_level="Level"+target_level+"__c";
+		    
+		    
+		    //msg_body+="Severe Contact Reason:  "+(String)receipient_hashmap.get("Name")+"\n";
 		    msg_body+="Priority:   "+(String)receipient_hashmap.get("Default_Priority__c")+"\n";
 		    msg_body+="Contact Qualification:    "+ (String)receipient_hashmap.get("Contact_Qualification__c")+"\n";
-		    msg_body+="Reason Level:   "+(Float.valueOf((String)receipient_hashmap.get("Level__c")).intValue())+"\n\n\n\n";
-		    msg_body+="Reason Level1 -- "+(String)receipient_hashmap.get("Level1__c")+"\n";
+		    
+		    
+		    int reason_level=(Float.valueOf((String)receipient_hashmap.get("Level__c")).intValue());
+		    
+		    msg_body+="\n\n\n";
+		    msg_body+="-------------TRIGGERING REASON-----------\n";
+		    msg_body+="Severe Reason Level:  "+target_level+"\n";
+		    msg_body+="Severe Contact Reason:  "+(String)receipient_hashmap.get(severe_reason_level)+"\n";
+		    msg_body+="-------------TRIGGERING REASON-----------\n";
+		    msg_body+="\n\n\n";
+		    
+		    
+		    msg_body+="Reason Level:   "+reason_level+"\n\n\n\n";
+		    
+		    for(int i=1;i<=reason_level;i++){
+		    	String level_string="Level"+i+"__c";
+		    	
+		    	msg_body+=StringUtils.repeat("      ", i-1);
+		    	 msg_body+="Reason Level"+i+" -- "+(String)receipient_hashmap.get(level_string)+"\n";
+		    	 
+		    	 if(i==reason_level){
+		    		 continue;
+		    	 }else{
+		    		 msg_body+=StringUtils.repeat("      ", i-1);
+		    	 msg_body+="      |\n";
+		    	 }
+		    }
+		    /*msg_body+="Reason Level1 -- "+(String)receipient_hashmap.get("Level1__c")+"\n";
 		    msg_body+="      |\n";
 		    msg_body+="       ---Reason Level2 -- "+(String)receipient_hashmap.get("Level2__c")+"\n";
 		    msg_body+="                |\n";
 		    msg_body+="                 ---Reason Level3 -- "+(String)receipient_hashmap.get("Level3__c")+"\n";
-		    
+		    */
 			message.setText(msg_body);
 
 			Transport.send(message);
